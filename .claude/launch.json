@@ -4,8 +4,32 @@
     {
       "name": "web-dist",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["--yes", "serve", "-s", "apps/mobile/dist", "-l", "4173"],
+      "runtimeArgs": [
+        "--yes",
+        "serve",
+        "-s",
+        "apps/mobile/dist",
+        "-l",
+        "4173"
+      ],
       "port": 4173
+    },
+    {
+      "name": "web-demo",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "expo",
+        "start",
+        "--web",
+        "--port",
+        "8082",
+        "--clear"
+      ],
+      "cwd": "apps/mobile",
+      "port": 8082,
+      "env": {
+        "EXPO_PUBLIC_FORCE_DEMO": "1"
+      }
     }
   ]
 }

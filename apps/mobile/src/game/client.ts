@@ -3,6 +3,7 @@ import {
   applyAction,
   createInitialState,
   GameError,
+  rewindClock,
   type DetectiveReport,
   type GameAction,
   type GameEvent,
@@ -35,6 +36,8 @@ export interface GameClient {
   act(action: GameAction): Promise<Snapshot>;
   theft(targetId: string, thieves: number): Promise<Snapshot & { outcome: TheftOutcome }>;
   detective(targetId: string): Promise<Snapshot & { report: DetectiveReport }>;
+  /** Admin : simule `hours` actualisations. */
+  rewind(hours: number): Promise<Snapshot>;
 }
 
 // ---------------------------------------------------------------- Serveur (Supabase)
@@ -57,6 +60,7 @@ export const remoteClient: GameClient = {
   act: (action) => invoke<Snapshot>('game', { action }),
   theft: (targetId, thieves) => invoke('pvp', { type: 'theft', targetId, thieves }),
   detective: (targetId) => invoke('pvp', { type: 'detective', targetId }),
+  rewind: (hours) => invoke<Snapshot>('game', { debugRewindHours: hours }),
 };
 
 // ---------------------------------------------------------------- Démo hors ligne (moteur local)
@@ -69,10 +73,11 @@ function loadLocal(now: number): GameState {
   return createInitialState(now, Math.floor(Math.random() * 2 ** 31));
 }
 
-function runLocal(action: GameAction | null): Snapshot {
+function runLocal(action: GameAction | null, rewindHours?: number): Snapshot {
   const now = Date.now();
-  const { state, events } = advance(loadLocal(now), now);
   try {
+    const saved = loadLocal(now);
+    const { state, events } = advance(rewindHours ? rewindClock(saved, rewindHours) : saved, now);
     const next = action ? applyAction(state, action, now) : state;
     localStorage.setItem(SAVE_KEY, JSON.stringify(next));
     return { state: next, events, serverTime: now };
@@ -91,6 +96,7 @@ export const localClient: GameClient = {
   detective: async () => {
     throw new ClientError('OFFLINE');
   },
+  rewind: async (hours) => runLocal(null, hours),
 };
 
 export function resetLocalGame(): void {

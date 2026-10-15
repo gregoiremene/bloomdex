@@ -1,11 +1,10 @@
-import { useHeaderHeight } from '@react-navigation/elements';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSession, type Profile } from '@/auth/session';
 import { errorMessage } from '@/game/labels';
 import { useGame } from '@/game/store';
 import { supabase } from '@/lib/supabase';
-import { Button, Card, Field, Muted, Row, Screen } from '@/ui/components';
+import { Button, Card, Field, KeyboardAvoider, Muted, Row, Screen } from '@/ui/components';
 import { colors, radius, spacing } from '@/ui/theme';
 
 interface Message {
@@ -74,7 +73,6 @@ function useChat() {
 function Chat({ profile }: { profile: Profile }) {
   const { messages, blocked, setBlocked } = useChat();
   const setNotice = useGame((s) => s.setNotice);
-  const headerHeight = useHeaderHeight();
   const [draft, setDraft] = useState('');
   const [selected, setSelected] = useState<number | null>(null);
   const isModerator = profile.role !== 'player';
@@ -95,7 +93,7 @@ function Chat({ profile }: { profile: Profile }) {
   }, [draft, setNotice]);
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={headerHeight}>
+    <KeyboardAvoider style={styles.container}>
       <FlatList
         inverted
         data={visible}
@@ -124,7 +122,7 @@ function Chat({ profile }: { profile: Profile }) {
         <Field value={draft} onChangeText={setDraft} placeholder="Écrire sur le squatte…" maxLength={500} onSubmitEditing={send} returnKeyType="send" />
         <Button label="Envoyer" onPress={send} disabled={!draft.trim()} />
       </View>
-    </KeyboardAvoidingView>
+    </KeyboardAvoider>
   );
 }
 

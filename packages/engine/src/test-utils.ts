@@ -47,7 +47,7 @@ export function addPlant(state: GameState, overrides: Partial<Plant> = {}): Plan
     overdoseHours: 0,
     infested: false,
     protectedVeg: true,
-    protectedFlo: true,
+    floProtectionHours: 1_000,
     pollinationHours: 0,
     conditionSum: 0,
     growthHours: 0,

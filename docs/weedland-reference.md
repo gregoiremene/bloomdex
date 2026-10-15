@@ -48,7 +48,7 @@ Le joueur est un « cannabiculteur » : il **cultive**, **récolte**, puis **rev
 - L'eau/engrais **diminuent à chaque actualisation**. **0 = mort**, **dépassement du max = surdose = mort** → sauf **rempotage** (nécessite un pot neuf de même taille ; il faut ré-arroser ensuite). Sécurité : max 10 cl (végé) / 25 cl (flo) par action.
 - **Geler/dégeler** : met les plants en pause (pas de pousse, pas de consommation). Les mâles gelés pollinisent quand même.
 - **Hibernation** du compte (≥ 8 jours) : pas d'impôts, plants gelés.
-- **Pucerons** : ralentissent la pousse. Traitement préventif **2×** (1 en végétation, 1 en floraison), **4 ml d'insecticide/plant**, ensuite immunisé.
+- **Pucerons** : ralentissent la pousse. Traitement préventif **2×** (1 en végétation, 1 en floraison), **4 ml d'insecticide/plant**, ensuite immunisé. *(WeedApp : en flo, la protection s'use après 36-60 h, voir CLAUDE.md.)*
 - **Mâles** : produisent très peu (~17 g) et **pollinisent** les femelles (effet à partir de ~100 cm) → femelles donnent des **graines** au lieu de beuh. On peut les jeter (en masse). Femelle saine sans pollinisation ≈ **125-150 g** (fiche : 125 g). Session « graines » complète ≈ 17 g + ~98 graines/pied.
 - **Événements aléatoires** (panne de courant, lapins, vent violent…) : 1 h sans croissance.
 - **Plants morts** : à supprimer ; classement « plus mauvais cultivateur ».

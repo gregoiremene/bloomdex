@@ -46,6 +46,7 @@ const ERRORS: Record<string, string> = {
   GERMINATION_FULL: 'Tes kits de germination sont pleins. Achète un kit de plus.',
   GERM_NOT_FOUND: 'Germe introuvable.',
   GERM_NOT_READY: 'Ce germe ne fait pas encore 10 cm.',
+  GERM_DEAD: 'Ce germe est mort : jette-le pour libérer sa place.',
   NOT_ENOUGH_READY_GERMS: "Pas assez de germes prêts (10 cm).",
   HOUSING_FULL: 'Plus de place dans ton habitation.',
   INSUFFICIENT_POTS: 'Pas assez de pots de cette taille.',
@@ -79,6 +80,7 @@ const ERRORS: Record<string, string> = {
   VERSION_CONFLICT: 'Conflit de synchronisation, réessaie.',
   PLAYER_NOT_FOUND: 'Joueur introuvable.',
   OFFLINE: 'Disponible uniquement en ligne.',
+  FORBIDDEN: 'Réservé aux admins.',
   NETWORK_ERROR: 'Pas de connexion au serveur.',
   RATE_LIMITED: 'Doucement ! Attends quelques secondes.',
 };
@@ -94,6 +96,7 @@ export function logText(entry: LogEntry): string {
     case 'purchase': return `Achat (${d.quantity}×) pour ${wl(Number(d.cost))}`;
     case 'seeds_sown': return `${d.count} graines de ${variety(d.variety)} mises à germer`;
     case 'germs_planted': return `${d.count} germes plantés (pots de ${d.potSize} cm)`;
+    case 'germs_died': return `${d.count} germe(s) mort(s), faute de place dans le kit`;
     case 'plant_died': return `Un plant de ${variety(d.variety)} est mort (${DEATH[String(d.cause)] ?? d.cause})`;
     case 'drying_done': return `${variety(d.variety)} sèche et prête : ${grams(Number(d.grams))}`;
     case 'plants_repotted': return `${d.count} plant(s) rempoté(s)`;
@@ -123,16 +126,20 @@ export function logText(entry: LogEntry): string {
 export function eventsSummary(events: GameEvent[]): string | null {
   const parts: string[] = [];
   const deaths = events.filter((e) => e.type === 'plant_died').length;
+  const germDeaths = events.reduce((sum, e) => sum + (e.type === 'germs_died' ? e.count : 0), 0);
   const dried = events.filter((e) => e.type === 'drying_done').length;
   const sales = events.filter((e) => e.type === 'sale_completed');
   const raid = events.find((e) => e.type === 'raid');
   const bill = events.find((e) => e.type === 'weekly_bill');
   if (raid) parts.push('🚨 Descente des stups !');
   if (deaths) parts.push(`💀 ${deaths} plant(s) mort(s)`);
+  if (germDeaths) parts.push(`💀 ${germDeaths} germe(s) mort(s)`);
   if (dried) parts.push(`🌿 ${dried} plant(s) prêt(s) à récolter`);
   if (sales.length) parts.push(`💰 ${sales.length} vente(s) terminée(s)`);
   if (bill && bill.type === 'weekly_bill') parts.push(`🧾 Impôts : ${wl(bill.bill.total)}`);
   return parts.length ? parts.join(' · ') : null;
 }
+
+export const deathLabel = (cause: string | undefined) => (cause ? (DEATH[cause] ?? cause) : 'cause inconnue');
 
 export { variety as varietyName, place as placeName, housing as housingName, job as jobName };

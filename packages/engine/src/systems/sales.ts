@@ -3,7 +3,7 @@ import { BALANCE } from '../data/balance.ts';
 import { HOUSINGS } from '../data/housings.ts';
 import { isPlaceOpen, PLACES, type PlaceId } from '../data/places.ts';
 import { addLog, HOUR_MS, type GameState } from '../state.ts';
-import { marketPrice } from './market.ts';
+import { playerPrice, recordSale } from './market.ts';
 
 export type SalesEvent =
   | { type: 'sale_completed'; placeId: PlaceId; earned: number }
@@ -22,7 +22,9 @@ function tickSales(state: GameState, at: number, events: SalesEvent[]): void {
     if (!isPlaceOpen(place, clock)) continue;
     const grams = Math.min(place.capacityPerHour, sale.gramsLeft);
     if (grams <= 0) continue;
-    const price = marketPrice(sale.variety, at - HOUR_MS);
+    // Prix saturé selon ce que le joueur a déjà vendu de cette variété (au début de l'heure).
+    const price = playerPrice(state, sale.variety, at - HOUR_MS);
+    recordSale(state, sale.variety, at - HOUR_MS, grams);
     sale.gramsLeft -= grams;
     sale.gramsSold += grams;
     sale.earned += Math.round((grams * price * place.rentPercent) / 100);

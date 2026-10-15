@@ -24,7 +24,7 @@ describe('vols', () => {
     expect(result.money).toBeLessThanOrEqual(10_000);
     expect(result.attacker.money).toBe(50_000 - 6_000 + result.money);
     expect(result.victim.money).toBe(100_000 - result.money);
-    expect(result.victim.stock.super_skunk + result.attacker.stock.super_skunk).toBe(1_000 + 150);
+    expect(result.victim.stock.super_skunk + result.attacker.stock.super_skunk).toBe(victim.stock.super_skunk + attacker.stock.super_skunk);
     expect(result.victim.log[0]).toMatchObject({ type: 'robbed', data: { attacker: 'Alice' } });
     expect(result.attacker.log[0]).toMatchObject({ type: 'theft_success', data: { target: 'Bob' } });
   });

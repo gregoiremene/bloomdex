@@ -6,6 +6,7 @@ export type GameErrorCode =
   | 'GERMINATION_FULL'
   | 'GERM_NOT_FOUND'
   | 'GERM_NOT_READY'
+  | 'GERM_DEAD'
   | 'NOT_ENOUGH_READY_GERMS'
   | 'HOUSING_FULL'
   | 'INSUFFICIENT_POTS'

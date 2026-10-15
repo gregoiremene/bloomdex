@@ -17,6 +17,10 @@ interface SessionStore {
   signIn: (email: string, password: string) => Promise<string | null>;
   signUp: (email: string, password: string, pseudo: string) => Promise<string | null>;
   signOut: () => Promise<void>;
+  /** Vrai entre la validation du code de réinitialisation et le choix du nouveau mot de passe. */
+  recovering: boolean;
+  requestPasswordReset: (email: string) => Promise<string | null>;
+  resetPassword: (email: string, code: string, password: string) => Promise<string | null>;
 }
 
 const AUTH_ERRORS: Record<string, string> = {
@@ -24,6 +28,9 @@ const AUTH_ERRORS: Record<string, string> = {
   user_already_exists: 'Un compte existe déjà avec cet email.',
   weak_password: 'Mot de passe trop faible (6 caractères minimum).',
   email_not_confirmed: 'Confirme ton email avant de te connecter.',
+  otp_expired: 'Code invalide ou expiré.',
+  same_password: "Choisis un mot de passe différent de l'ancien.",
+  over_email_send_rate_limit: 'Trop de demandes : réessaie dans quelques minutes.',
 };
 
 function authError(error: { code?: string; message: string }): string {
@@ -37,8 +44,9 @@ async function loadProfile(userId: string): Promise<Profile | null> {
   return (data as Profile | null) ?? null;
 }
 
-export const useSession = create<SessionStore>((set) => ({
+export const useSession = create<SessionStore>((set, get) => ({
   ready: !supabase,
+  recovering: false,
   session: null,
   profile: null,
 
@@ -73,5 +81,30 @@ export const useSession = create<SessionStore>((set) => ({
 
   signOut: async () => {
     await supabase?.auth.signOut();
+  },
+
+  // Réinitialisation par code reçu par email (pas de lien : rien à rouvrir dans l'app, marche aussi dans Expo Go).
+  requestPasswordReset: async (email) => {
+    if (!supabase) return null;
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    return error ? authError(error) : null;
+  },
+
+  resetPassword: async (email, code, password) => {
+    if (!supabase) return null;
+    if (password.length < 6) return AUTH_ERRORS.weak_password!;
+    // Code déjà validé si une tentative précédente a échoué sur le mot de passe : on ne le revérifie pas.
+    if (!get().recovering) {
+      set({ recovering: true });
+      const { error } = await supabase.auth.verifyOtp({ email, token: code, type: 'recovery' });
+      if (error) {
+        set({ recovering: false });
+        return authError(error);
+      }
+    }
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) return authError(error);
+    set({ recovering: false });
+    return null;
   },
 }));

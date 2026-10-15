@@ -72,6 +72,8 @@ export async function scheduleReminders(state: GameState): Promise<void> {
     if (dried) reminders.push({ at: dried.at, title: 'Récolte prête 🌿', body: 'Un plant a fini de sécher.' });
     const germs = first(events, 'germs_ready');
     if (germs) reminders.push({ at: germs.at, title: 'Germes prêts 🌱', body: 'Des germes font 10 cm : plante-les.' });
+    const cramped = first(events, 'germs_died');
+    if (cramped) reminders.push({ at: cramped.at - THIRST_WARNING_HOURS * HOUR_MS, title: 'Germes à l’étroit 🌱', body: 'Des germes vont mourir faute de place : plante-les vite.' });
     const sale = first(events, 'sale_completed');
     if (sale?.type === 'sale_completed') reminders.push({ at: sale.at, title: 'Vente terminée 💰', body: `Ta vente à ${PLACES[sale.placeId].name} est finie.` });
     const alert = first(events, 'police_alert');

@@ -249,6 +249,11 @@ otp_expiry = 3600
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"
 
+# Réinitialisation du mot de passe par code (l'app ne gère pas de lien de retour).
+[auth.email.template.recovery]
+subject = "Ton code pour changer de mot de passe"
+content_path = "./supabase/templates/recovery.html"
+
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
 # enabled = true

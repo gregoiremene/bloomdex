@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { BALANCE } from '../data/balance.ts';
 import { GameError } from '../errors.ts';
 import { newGame, T0 } from '../test-utils.ts';
 import { buy, type ShopItem } from './shop.ts';
@@ -8,7 +9,7 @@ describe('boutique', () => {
     const state = newGame();
     expect(state.money).toBe(2_000);
     expect(state.housing).toBe('chambre');
-    expect(state.stock.super_skunk).toBe(150);
+    expect(state.stock[BALANCE.start.stock.variety]).toBe(BALANCE.start.stock.grams);
   });
 
   it('vend les graines par paquets de 15', () => {

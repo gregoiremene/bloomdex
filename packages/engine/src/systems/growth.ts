@@ -1,10 +1,11 @@
 import { BALANCE } from '../data/balance.ts';
 import { EQUIPMENT, EQUIPMENT_IDS, POTS, type EquipmentKind } from '../data/equipment.ts';
 import { chance, randomBetween, randomInt } from '../rng.ts';
-import { addLog, growingPlants, type DeathCause, type GameState, type Plant, type Room } from '../state.ts';
+import { addLog, germHoursLeft, growingPlants, isProtected, type DeathCause, type GameState, type Plant, type Room } from '../state.ts';
 
 export type GrowthEvent =
   | { type: 'germs_ready'; count: number }
+  | { type: 'germs_died'; count: number }
   | { type: 'stage_changed'; plantId: number; to: 'flo' | 'drying' }
   | { type: 'plant_died'; plantId: number; cause: DeathCause }
   | { type: 'aphids'; plantId: number }
@@ -42,6 +43,7 @@ export function lightFactor(state: GameState, room: Room): number {
 }
 
 function kill(state: GameState, plant: Plant, cause: DeathCause, at: number, events: GrowthEvent[]): void {
+  if (plant.stage === 'veg' || plant.stage === 'flo') plant.diedIn = plant.stage;
   plant.stage = 'dead';
   plant.deathCause = cause;
   events.push({ type: 'plant_died', plantId: plant.id, cause });
@@ -64,15 +66,25 @@ function computeHarvest(state: GameState, plant: Plant): void {
   plant.harvestSeeds = Math.round(y.maxSeeds * pollination);
 }
 
-function tickGerms(state: GameState, events: GrowthEvent[]): void {
+function tickGerms(state: GameState, at: number, events: GrowthEvent[]): void {
   const g = BALANCE.germination;
   let newlyReady = 0;
+  let died = 0;
   for (const germ of state.germs) {
+    if (germ.dead) continue;
     const wasReady = germ.height >= g.plantableHeight;
     germ.height = Math.min(g.maxHeight, germ.height + g.cmPerHour * germ.devIndex * BALANCE.gameSpeed);
     if (!wasReady && germ.height >= g.plantableHeight) newlyReady++;
+    if (germHoursLeft(germ, at) <= 0) {
+      germ.dead = true;
+      died++;
+    }
   }
   if (newlyReady > 0) events.push({ type: 'germs_ready', count: newlyReady });
+  if (died > 0) {
+    events.push({ type: 'germs_died', count: died });
+    addLog(state, at, 'germs_died', { count: died });
+  }
 }
 
 function tickGrowingPlant(state: GameState, plant: Plant, equipFactor: number, at: number, events: GrowthEvent[]): void {
@@ -98,11 +110,11 @@ function tickGrowingPlant(state: GameState, plant: Plant, equipFactor: number, a
   plant.conditionSum += conditions;
   plant.growthHours++;
 
-  const isProtected = room === 'veg' ? plant.protectedVeg : plant.protectedFlo;
-  if (!isProtected && !plant.infested && chance(state, BALANCE.aphids.chancePerHour)) {
+  if (!isProtected(plant) && !plant.infested && chance(state, BALANCE.aphids.chancePerHour)) {
     plant.infested = true;
     events.push({ type: 'aphids', plantId: plant.id });
   }
+  if (room === 'flo') plant.floProtectionHours = Math.max(0, plant.floProtectionHours - speed);
 
   if (plant.height >= stage.endHeight) {
     if (room === 'veg') {
@@ -150,7 +162,7 @@ function tickDrying(state: GameState, at: number, events: GrowthEvent[]): void {
 export function tickGrowth(state: GameState, at: number): GrowthEvent[] {
   const events: GrowthEvent[] = [];
   tickDrying(state, at, events);
-  tickGerms(state, events);
+  tickGerms(state, at, events);
   // Le facteur matériel est calculé une fois pour l'heure, avant les changements de salle.
   const equipFactor = equipmentFactor(state);
   for (const plant of state.plants) tickGrowingPlant(state, plant, equipFactor, at, events);

@@ -18,7 +18,10 @@ export interface Germ {
   height: number;
   /** Indice de développement : multiplie toute la croissance du plant. */
   devIndex: number;
+  /** Date du semis (ms epoch) : le germe meurt faute de place au bout de `germination.lifespanHours`. */
   sownAt: number;
+  /** Mort faute de place : reste dans le kit (et y prend une place) jusqu'à ce qu'on le jette. */
+  dead: boolean;
 }
 
 export interface Plant {
@@ -37,7 +40,8 @@ export interface Plant {
   overdoseHours: number;
   infested: boolean;
   protectedVeg: boolean;
-  protectedFlo: boolean;
+  /** Heures de protection restantes en floraison (0 = non protégé). */
+  floProtectionHours: number;
   pollinationHours: number;
   /** Somme des facteurs de conditions (matériel × éclairage) par heure de pousse. */
   conditionSum: number;
@@ -47,6 +51,8 @@ export interface Plant {
   harvestGrams: number;
   harvestSeeds: number;
   deathCause?: DeathCause;
+  /** Salle où le plant est mort (il y reste affiché jusqu'à ce qu'on le retire). */
+  diedIn?: Room;
 }
 
 export interface Inventory {
@@ -101,6 +107,8 @@ export interface GameState {
   job: JobId;
   guards: number;
   thefts: { dayKey: string; count: number };
+  /** Grammes vendus par variété pendant la période de prix en cours (saturation du marché). */
+  marketSold: { period: number; grams: Partial<Record<VarietyId, number>> };
   /** Consommations de la semaine, facturées avec les impôts. */
   meters: { waterCl: number; kwh: number };
   log: LogEntry[];
@@ -141,9 +149,20 @@ export function createInitialState(now: number, seed: number): GameState {
     job: 'none',
     guards: 0,
     thefts: { dayKey: '', count: 0 },
+    marketSold: { period: -1, grams: {} },
     meters: { waterCl: 0, kwh: 0 },
     log: [],
   };
+}
+
+/** Heures de vie restantes d'un germe à l'instant `at` (≤ 0 : il meurt à la prochaine actualisation). */
+export function germHoursLeft(germ: Germ, at: number): number {
+  return BALANCE.germination.lifespanHours - (at - germ.sownAt) / HOUR_MS;
+}
+
+/** Protégé contre les pucerons pour son stade actuel. */
+export function isProtected(plant: Plant): boolean {
+  return plant.stage === 'veg' ? plant.protectedVeg : plant.floProtectionHours > 0;
 }
 
 /** Copie profonde : les actions et le tick ne modifient jamais l'état reçu. */

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { advance } from './advance.ts';
+import { advance, migrateState, rewindClock } from './advance.ts';
 import { random } from './rng.ts';
 import { HOUR_MS } from './state.ts';
+import { sowSeeds } from './actions/culture.ts';
 import { addPlant, equippedGame, newGame, T0 } from './test-utils.ts';
 
 describe('rng', () => {
@@ -51,5 +52,57 @@ describe('advance', () => {
     const once = advance(state, T0 + 10 * HOUR_MS).state;
     const split = advance(advance(state, T0 + 4 * HOUR_MS).state, T0 + 10 * HOUR_MS).state;
     expect(split).toEqual(once);
+  });
+});
+
+describe('migrateState', () => {
+  it('convertit l’ancienne protection flo (booléen) en heures de protection', () => {
+    const state = equippedGame();
+    const flo = addPlant(state, { stage: 'flo', height: 70 });
+    const veg = addPlant(state);
+    for (const plant of [flo, veg]) {
+      const legacy = plant as Partial<typeof plant> & { protectedFlo?: boolean };
+      delete legacy.floProtectionHours;
+      legacy.protectedFlo = true;
+    }
+    migrateState(state);
+    expect(flo.floProtectionHours).toBeGreaterThanOrEqual(36);
+    expect(flo.floProtectionHours).toBeLessThanOrEqual(60);
+    expect(veg.floProtectionHours).toBe(0);
+    expect('protectedFlo' in flo).toBe(false);
+  });
+
+  it('complète les germes et la salle des plants morts d’avant', () => {
+    const state = equippedGame();
+    state.germs.push({ id: 999, variety: 'super_skunk', height: 12, devIndex: 1, sownAt: T0, hoursAtMax: 3 } as unknown as (typeof state.germs)[number]);
+    const deadVeg = addPlant(state, { stage: 'dead', height: 30 });
+    const deadFlo = addPlant(state, { stage: 'dead', height: 120 });
+    migrateState(state);
+    expect(state.germs[0]).toMatchObject({ dead: false });
+    expect('hoursAtMax' in state.germs[0]!).toBe(false);
+    expect(deadVeg.diedIn).toBe('veg');
+    expect(deadFlo.diedIn).toBe('flo');
+  });
+});
+
+describe('rewindClock', () => {
+  it('fait rejouer N actualisations au prochain advance', () => {
+    const state = equippedGame();
+    const now = state.lastTickAt;
+    const { ticks, state: after } = advance(rewindClock(state, 6), now);
+    expect(ticks).toBe(6);
+    expect(after.lastTickAt).toBe(now);
+  });
+
+  it('fait vieillir les germes pendant la simulation', () => {
+    const state = sowSeeds(equippedGame(), 'super_skunk', 1, T0);
+    const { state: after } = advance(rewindClock(state, 48), T0);
+    expect(after.germs[0]!.dead).toBe(true);
+  });
+
+  it('refuse les durées invalides', () => {
+    expect(() => rewindClock(newGame(), 0)).toThrow('INVALID_QUANTITY');
+    expect(() => rewindClock(newGame(), 49)).toThrow('INVALID_QUANTITY');
+    expect(() => rewindClock(newGame(), 1.5)).toThrow('INVALID_QUANTITY');
   });
 });

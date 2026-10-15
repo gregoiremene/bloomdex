@@ -14,7 +14,7 @@ export const BALANCE = {
   start: {
     money: 2_000,
     /** Stock offert au départ pour pouvoir vendre dès le premier jour. */
-    stock: { variety: 'super_skunk' as VarietyId, grams: 150 },
+    stock: { variety: 'jack_herer' as VarietyId, grams: 150 },
     lightHours: { veg: 18, flo: 12 },
   },
 
@@ -25,6 +25,13 @@ export const BALANCE = {
     cmPerHour: 10 / 24,
     plantableHeight: 10,
     maxHeight: 15,
+    /**
+     * Durée de vie dans le kit, depuis le semis : au-delà, le germe meurt faute de place, quelle que
+     * soit sa taille. Germe rapide (indice 1,3) prêt en ~18 h → ~30 h pour le planter ; lent (0,7) → ~14 h.
+     */
+    lifespanHours: 48,
+    /** Le germe est signalé « à l'étroit » pendant ses dernières heures de vie. */
+    crampedWarningHours: 12,
     /** Indice de développement aléatoire d'un germe (multiplie toute sa croissance). */
     devIndexMin: 0.7,
     devIndexMax: 1.3,
@@ -71,6 +78,12 @@ export const BALANCE = {
     chancePerHour: 0.01,
     growthFactor: 0.5,
     insecticidePerTreatmentMl: 4,
+    /**
+     * Végé : un traitement protège jusqu'à la fin du stade. Flo : la protection s'use au bout
+     * d'une durée tirée au hasard à chaque traitement (≈ 2 traitements sur les ~84 h de flo).
+     * Volontairement non affichée au joueur : il apprend le rythme en jouant.
+     */
+    floProtectionHours: { min: 36, max: 60 },
   },
 
   sex: { maleChance: 0.25 },
@@ -91,11 +104,20 @@ export const BALANCE = {
   },
 
   market: {
-    /** Les prix de revente sont réévalués à chaque période (alignée sur le lundi 00h UTC). */
-    repricePeriodHours: 168,
-    /** Facteur appliqué au prix de base de chaque variété, tiré par période. */
-    minFactor: 0.6,
-    maxFactor: 1.5,
+    /** Les prix de revente sont réévalués toutes les 6 semaines (périodes alignées sur un lundi 00h UTC). */
+    repricePeriodHours: 6 * 168,
+    /**
+     * Prix de revente (Wl/g) redistribués au hasard entre les variétés à chaque période :
+     * toujours 2 variétés à 7, mais jamais les mêmes d'office. Une valeur par variété.
+     * Sur la durée, toutes les variétés se valent (elles poussent et pèsent pareil).
+     */
+    priceLadder: [7, 7, 6, 6, 5, 5, 5, 4, 4, 4, 3, 3, 2, 2],
+    /**
+     * Saturation par joueur : plus il vend d'une même variété pendant la période, plus son prix baisse
+     * (−10 % tous les `gramsPerTenPercent`, sans descendre sous `floor` × le prix). Pousse à diversifier
+     * au lieu de ne planter que les variétés les mieux payées. Compteur remis à zéro à chaque période.
+     */
+    saturation: { gramsPerTenPercent: 3_000, floor: 0.5 },
     /** Graine fixe du marché : tous les joueurs voient les mêmes prix. */
     seed: 20_260_930,
   },
@@ -150,4 +172,7 @@ export const BALANCE = {
   },
 
   log: { maxEntries: 50 },
+
+  /** Outils réservés aux admins (tests en conditions réelles). */
+  admin: { maxRewindHours: 48 },
 } as const;

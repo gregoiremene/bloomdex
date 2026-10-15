@@ -3,8 +3,8 @@ import { HOUSINGS } from '../data/housings.ts';
 import { POTS, type PotSize } from '../data/equipment.ts';
 import type { VarietyId } from '../data/varieties.ts';
 import { GameError } from '../errors.ts';
-import { randomBetween, chance } from '../rng.ts';
-import { addLog, cloneState, growingPlants, type GameState, type Germ, type Plant, type Room } from '../state.ts';
+import { randomBetween, randomInt, chance } from '../rng.ts';
+import { addLog, cloneState, growingPlants, isProtected, type GameState, type Germ, type Plant, type Room } from '../state.ts';
 
 /** Plants ciblés : liste d'ids, une salle entière, ou tous les plants en pousse. */
 export type PlantSelector = number[] | { room: Room } | 'all';
@@ -51,6 +51,7 @@ export function sowSeeds(state: GameState, variety: VarietyId, count: number, no
       height: 0,
       devIndex: randomBetween(next, g.devIndexMin, g.devIndexMax),
       sownAt: now,
+      dead: false,
     });
   }
   addLog(next, now, 'seeds_sown', { variety, count });
@@ -93,7 +94,7 @@ function transplant(state: GameState, germs: Germ[], potSize: PotSize): void {
       overdoseHours: 0,
       infested: false,
       protectedVeg: false,
-      protectedFlo: false,
+      floProtectionHours: 0,
       pollinationHours: 0,
       conditionSum: 0,
       growthHours: 0,
@@ -111,6 +112,7 @@ export function plantGerms(state: GameState, germIds: number[], potSize: PotSize
   const germs = germIds.map((id) => {
     const germ = next.germs.find((g) => g.id === id);
     if (!germ) throw new GameError('GERM_NOT_FOUND', { germId: id });
+    if (germ.dead) throw new GameError('GERM_DEAD', { germId: id });
     if (germ.height < BALANCE.germination.plantableHeight) throw new GameError('GERM_NOT_READY', { germId: id });
     return germ;
   });
@@ -123,7 +125,7 @@ export function plantGerms(state: GameState, germIds: number[], potSize: PotSize
 export function plantFastestGerms(state: GameState, count: number, potSize: PotSize, now: number): GameState {
   assertCount(count);
   const ready = state.germs
-    .filter((g) => g.height >= BALANCE.germination.plantableHeight)
+    .filter((g) => !g.dead && g.height >= BALANCE.germination.plantableHeight)
     .sort((a, b) => b.height - a.height || b.devIndex - a.devIndex);
   if (ready.length < count) throw new GameError('NOT_ENOUGH_READY_GERMS', { ready: ready.length });
   return plantGerms(state, ready.slice(0, count).map((g) => g.id), potSize, now);
@@ -184,15 +186,13 @@ export function fillToMax(state: GameState, selector: PlantSelector): GameState 
 /** Traite contre les pucerons : protège le plant pour son stade actuel et le guérit. */
 export function treatPlants(state: GameState, selector: PlantSelector): GameState {
   const next = cloneState(state);
-  const plants = selectGrowing(next, selector).filter((p) =>
-    p.stage === 'veg' ? !p.protectedVeg : !p.protectedFlo,
-  );
+  const plants = selectGrowing(next, selector).filter((p) => !isProtected(p));
   const needed = plants.length * BALANCE.aphids.insecticidePerTreatmentMl;
   if (next.inventory.insecticideMl < needed) throw new GameError('INSUFFICIENT_INSECTICIDE', { needed });
   next.inventory.insecticideMl -= needed;
   for (const plant of plants) {
     if (plant.stage === 'veg') plant.protectedVeg = true;
-    else plant.protectedFlo = true;
+    else plant.floProtectionHours = randomInt(next, BALANCE.aphids.floProtectionHours.min, BALANCE.aphids.floProtectionHours.max);
     plant.infested = false;
   }
   return next;

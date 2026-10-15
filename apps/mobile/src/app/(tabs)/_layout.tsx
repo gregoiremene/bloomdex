@@ -5,6 +5,7 @@ import { useSession } from '@/auth/session';
 import { useGame } from '@/game/store';
 import { isOnline } from '@/lib/supabase';
 import { colors } from '@/ui/theme';
+import { WalletButton } from '@/ui/Wallet';
 
 function icon(glyph: string) {
   return ({ focused }: { focused: boolean }) => <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.55 }}>{glyph}</Text>;
@@ -41,6 +42,7 @@ export default function TabsLayout() {
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textMuted,
         sceneStyle: { backgroundColor: colors.background },
+        headerRight: () => <WalletButton />,
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Exploitation', tabBarIcon: icon('🌱') }} />

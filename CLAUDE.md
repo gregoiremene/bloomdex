@@ -91,7 +91,7 @@ docs/
 ## Décisions ouvertes
 - Nom du jeu / DA (cartoon ? pixel ?), thème final (cannabis assumé vs reskin plus neutre selon politiques App Store / Play Store).
 - Quantité exacte du stock de départ (150 g de Super Skunk pour l'instant).
-- Formules provisoires à équilibrer en jeu : baisse de l'indice police (2,5 % du max/h), réussite d'un vol (voleurs / (voleurs + gardes)), part volée (5-10 %), prix réévalués chaque semaine (×0,6 à ×1,5), livret unique (1,5 %/sem., plafond 25 M), électricité/eau.
+- Formules provisoires à équilibrer en jeu : baisse de l'indice police (2,5 % du max/h), réussite d'un vol (voleurs / (voleurs + gardes)), part volée (5-10 %), échelle de prix de revente redistribuée toutes les 6 semaines (7, 7, 6, 6, 5, 5, 5, 4, 4, 4, 3, 3, 2, 2), saturation par joueur (−10 % / 3 000 g vendus d'une variété, plancher −50 %), livret unique (1,5 %/sem., plafond 25 M), électricité/eau.
 
 ## Décisions prises
 - 2026-09-30 : cycle complet ~1 semaine, 2 sessions courtes/jour (pas de cycle compressé à 1 jour).
@@ -101,4 +101,8 @@ docs/
 - 2026-10-07 : le jeu doit aussi être jouable sur le web (export Metro `single`, hébergement EAS Hosting) ; pas de notifications sur le web.
 - 2026-10-10 : projet rétrogradé de SDK 57 à **SDK 54** (Expo Go de l'utilisateur·rice en 54 ; compatible Xcode 16.1+, donc build iOS local possible).
 - 2026-10-10 : développement en **Expo Go** (plus rapide) ; notifications désactivées dans Expo Go et sur le web (module chargé à la demande), réactivées automatiquement dans un dev build / build store.
+- 2026-10-13 : pucerons — 1 traitement suffit en végé ; en flo la protection s'use après 36-60 h (tirage par plant et par traitement, ≈ 2 traitements par flo). Durée **jamais affichée** : seul un 🐜 signale un plant non protégé, les joueurs apprennent le rythme en jouant.
+- 2026-10-13 : les germes morts occupent le kit jusqu'à ce qu'on les jette. Les plants morts restent affichés dans la salle où ils sont morts.
+- 2026-10-15 : un germe meurt faute de place **48 h après son semis**, quelle que soit sa taille (remplace « 12 h à 15 cm », qui laissait vivre indéfiniment les germes lents) ; signalé « à l'étroit » ses 12 dernières heures.
+- 2026-10-15 : prix de revente = une échelle fixe redistribuée au hasard entre les 14 variétés **toutes les 6 semaines** (comme l'original : toujours 2 variétés à 7 Wl/g, jamais les mêmes d'office). Pour éviter que tout le monde ne plante que celles-là : **saturation par joueur**, son prix baisse avec ce qu'il a déjà vendu de la variété pendant la période (compteur `marketSold`, remis à zéro à chaque réévaluation). Remplace « prix de base × 0,6-1,5 chaque semaine ». (V2 : saturation globale selon l'offre réelle.)
 - Ordre de travail : 1) moteur de culture + tests (local) 2) Supabase + comptes + banque 3) ventes, police, impôts 4) chat + modération, puis vols + gardes.

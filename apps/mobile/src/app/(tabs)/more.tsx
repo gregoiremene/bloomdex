@@ -1,27 +1,13 @@
 import { HOUSINGS, JOBS } from '@weedapp/engine';
-import { Link, type Href } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { useSession } from '@/auth/session';
 import { resetLocalGame } from '@/game/client';
 import { useGame, useGameState } from '@/game/store';
 import { isOnline } from '@/lib/supabase';
-import { Button, Card, Muted, Screen } from '@/ui/components';
+import { Button, Muted, Screen, Tile, TileGrid } from '@/ui/components';
 import { confirm } from '@/ui/confirm';
-import { colors, spacing } from '@/ui/theme';
-
-function NavRow({ href, title, detail }: { href: Href; title: string; detail: string }) {
-  return (
-    <Link href={href} asChild>
-      <Pressable style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}>
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text style={styles.title}>{title}</Text>
-          <Muted>{detail}</Muted>
-        </View>
-        <Text style={styles.chevron}>›</Text>
-      </Pressable>
-    </Link>
-  );
-}
+import { Sheet } from '@/ui/Sheet';
 
 export default function MoreScreen() {
   const state = useGameState();
@@ -29,18 +15,21 @@ export default function MoreScreen() {
   const signOut = useSession((s) => s.signOut);
   const sync = useGame((s) => s.sync);
   const reset = useGame((s) => s.reset);
+  const router = useRouter();
+  const [account, setAccount] = useState(false);
   if (!state) return null;
 
   return (
     <Screen>
-      <Card>
-        <NavRow href="/housing" title="Immobilier" detail={`${HOUSINGS[state.housing].name} · ${HOUSINGS[state.housing].plantCapacity} plants`} />
-        <NavRow href="/jobs" title="Métiers" detail={JOBS[state.job].name} />
-        <NavRow href="/players" title="La ville" detail={`Voleurs, gardes du corps (${state.guards}), détective`} />
-        <NavRow href="/journal" title="Journal" detail="Tes 50 dernières actions" />
-      </Card>
+      <TileGrid>
+        <Tile icon="🏠" title="Immobilier" subtitle={`${HOUSINGS[state.housing].name} · ${HOUSINGS[state.housing].plantCapacity} plants`} onPress={() => router.push('/housing')} />
+        <Tile icon="💼" title="Métiers" subtitle={JOBS[state.job].name} onPress={() => router.push('/jobs')} />
+        <Tile icon="🏙️" title="La ville" subtitle={`Vols, gardes du corps (${state.guards}), détective`} onPress={() => router.push('/players')} />
+        <Tile icon="📓" title="Journal" subtitle="Tes 50 dernières actions" onPress={() => router.push('/journal')} />
+        <Tile icon="👤" title="Compte" subtitle={isOnline ? (profile?.pseudo ?? '…') : 'Mode démo'} onPress={() => setAccount(true)} />
+      </TileGrid>
 
-      <Card title="Compte">
+      <Sheet visible={account} onClose={() => setAccount(false)} title="Compte" icon="👤">
         {isOnline ? (
           <>
             <Muted>
@@ -51,6 +40,7 @@ export default function MoreScreen() {
               label="Se déconnecter"
               variant="secondary"
               onPress={async () => {
+                setAccount(false);
                 reset();
                 await signOut();
               }}
@@ -64,6 +54,7 @@ export default function MoreScreen() {
               variant="danger"
               onPress={() =>
                 confirm('Recommencer ?', 'Ta partie locale sera effacée.', 'Effacer', () => {
+                  setAccount(false);
                   resetLocalGame();
                   void sync();
                 })
@@ -71,13 +62,7 @@ export default function MoreScreen() {
             />
           </>
         )}
-      </Card>
+      </Sheet>
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.md, gap: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
-  title: { color: colors.text, fontSize: 16, fontWeight: '600' },
-  chevron: { color: colors.textMuted, fontSize: 24 },
-});

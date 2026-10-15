@@ -110,7 +110,7 @@ describe('soins', () => {
     const plant = addPlant(state, { protectedVeg: false, infested: true });
     addPlant(state); // déjà protégé : ne consomme rien
     const treated = treatPlants(state, 'all');
-    expect(plantById(treated, plant.id)).toMatchObject({ protectedVeg: true, infested: false, protectedFlo: true });
+    expect(plantById(treated, plant.id)).toMatchObject({ protectedVeg: true, infested: false });
     expect(treated.inventory.insecticideMl).toBe(1_000 - 4);
   });
 
@@ -146,7 +146,7 @@ describe('tri et récolte', () => {
     addPlant(state, { stage: 'dry', harvestGrams: 17, harvestSeeds: 98 });
     addPlant(state, { stage: 'drying', harvestGrams: 140 });
     const harvested = harvest(state, T0);
-    expect(harvested.stock.super_skunk).toBe(150 + 157);
+    expect(harvested.stock.super_skunk).toBe(state.stock.super_skunk + 157);
     expect(harvested.inventory.seeds.super_skunk).toBe(100 + 98);
     expect(harvested.plants.map((p) => p.stage)).toEqual(['drying']);
     expect(harvested.log[0]).toMatchObject({ type: 'harvest', data: { plants: 2, grams: 157, seeds: 98 } });

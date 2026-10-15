@@ -1,6 +1,9 @@
-import type { ReactNode } from 'react';
+import { HeaderHeightContext } from '@react-navigation/elements';
+import { useContext, useRef, type ReactNode } from 'react';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -8,21 +11,73 @@ import {
   Text,
   TextInput,
   View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  type StyleProp,
   type TextInputProps,
   type ViewStyle,
 } from 'react-native';
 import { colors, radius, spacing } from './theme';
 
-export function Screen({ children, onRefresh, refreshing = false }: { children: ReactNode; onRefresh?: () => void; refreshing?: boolean }) {
+/** Distance du bas (px) à partir de laquelle on charge la suite d'une liste. */
+const END_REACHED_THRESHOLD = 600;
+
+/**
+ * Remonte le contenu au-dessus du clavier (iOS et Android, sans effet sur le web).
+ * Le décalage compense l'en-tête de navigation, que la vue ne voit pas dans son propre cadre.
+ */
+export function KeyboardAvoider({ children, style, enabled = true }: { children: ReactNode; style?: StyleProp<ViewStyle>; enabled?: boolean }) {
+  const headerHeight = useContext(HeaderHeightContext) ?? 0;
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={styles.screenContent}
-      keyboardShouldPersistTaps="handled"
-      refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} /> : undefined}
+    <KeyboardAvoidingView
+      style={[{ flex: 1 }, style]}
+      behavior="padding"
+      enabled={enabled && Platform.OS !== 'web'}
+      keyboardVerticalOffset={headerHeight}
     >
       {children}
-    </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+export function Screen({
+  children,
+  onRefresh,
+  refreshing = false,
+  onEndReached,
+}: {
+  children: ReactNode;
+  onRefresh?: () => void;
+  refreshing?: boolean;
+  /** Appelé quand on approche du bas (chargement progressif d'une longue liste). */
+  onEndReached?: () => void;
+}) {
+  // Une seule fois par hauteur de contenu : on attend que la suite soit affichée avant de redemander.
+  const firedAt = useRef(-1);
+  const onScroll = ({ nativeEvent: { layoutMeasurement, contentOffset, contentSize } }: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (!onEndReached || firedAt.current === contentSize.height) return;
+    if (layoutMeasurement.height + contentOffset.y >= contentSize.height - END_REACHED_THRESHOLD) {
+      firedAt.current = contentSize.height;
+      onEndReached();
+    }
+  };
+  // iOS : la ScrollView ajuste ses marges et défile jusqu'au champ actif. Android : on réduit la vue,
+  // et la ScrollView native amène d'elle-même le champ actif à l'écran.
+  return (
+    <KeyboardAvoider enabled={Platform.OS === 'android'}>
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.screenContent}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        automaticallyAdjustKeyboardInsets
+        onScroll={onEndReached ? onScroll : undefined}
+        scrollEventThrottle={100}
+        refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} /> : undefined}
+      >
+        {children}
+      </ScrollView>
+    </KeyboardAvoider>
   );
 }
 
@@ -106,7 +161,8 @@ export function Body({ children, bold }: { children: ReactNode; bold?: boolean }
 export function Field(props: TextInputProps & { label?: string }) {
   const { label, style, ...rest } = props;
   return (
-    <View style={{ gap: spacing.xs, flex: 1 }}>
+    // flexGrow/flexShrink plutôt que flex: 1 : sur natif, flexBasis 0 écrase la hauteur dans une colonne.
+    <View style={{ gap: spacing.xs, flexGrow: 1, flexShrink: 1 }}>
       {label ? <Text style={styles.muted}>{label}</Text> : null}
       <TextInput placeholderTextColor={colors.textMuted} style={[styles.input, style]} {...rest} />
     </View>
@@ -140,6 +196,115 @@ export function Chips<T extends string | number>({
         );
       })}
     </Row>
+  );
+}
+
+/** Bulles flottantes en bas d'un écran (ex. stades de culture), avec un compteur optionnel. */
+export function BubbleTabs<T extends string>({
+  tabs,
+  value,
+  onChange,
+}: {
+  tabs: readonly { value: T; label: string; icon?: ReactNode; count?: number; alert?: boolean }[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <View style={styles.bubbles} accessibilityRole="tablist">
+      {tabs.map((tab) => {
+        const selected = tab.value === value;
+        return (
+          <Pressable
+            key={tab.value}
+            onPress={() => onChange(tab.value)}
+            style={({ pressed }) => [styles.bubble, selected && styles.bubbleSelected, pressed && { opacity: 0.8 }]}
+            accessibilityRole="tab"
+            accessibilityState={{ selected }}
+            accessibilityLabel={tab.count !== undefined ? `${tab.label}, ${tab.count}` : tab.label}
+          >
+            {tab.icon}
+            <Text style={[styles.bubbleLabel, selected && { color: colors.accentText }]} numberOfLines={1}>
+              {tab.label}
+            </Text>
+            {tab.count !== undefined && tab.count > 0 && (
+              <View style={[styles.bubbleBadge, tab.alert && { backgroundColor: colors.danger }]}>
+                <Text style={styles.bubbleBadgeText}>{tab.count}</Text>
+              </View>
+            )}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/** Grille de tuiles, 2 par ligne. */
+export function TileGrid({ children }: { children: ReactNode }) {
+  return <View style={styles.tileGrid}>{children}</View>;
+}
+
+/** Gros bouton carré : logo, nom, sous-titre et pastille optionnelle. */
+export function Tile({
+  icon,
+  title,
+  subtitle,
+  badge,
+  badgeTone = 'accent',
+  dimmed,
+  onPress,
+}: {
+  icon: ReactNode;
+  title: string;
+  subtitle?: string;
+  badge?: string;
+  badgeTone?: 'accent' | 'warning' | 'danger' | 'muted';
+  dimmed?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      style={({ pressed }) => [styles.tile, dimmed && { opacity: 0.55 }, pressed && { opacity: 0.75, transform: [{ scale: 0.98 }] }]}
+    >
+      {badge ? (
+        <Text style={[styles.tileBadge, { color: badgeTone === 'muted' ? colors.textMuted : colors[badgeTone] }]} numberOfLines={1}>
+          {badge}
+        </Text>
+      ) : null}
+      <View style={styles.tileIcon}>{typeof icon === 'string' ? <Text style={styles.tileEmoji}>{icon}</Text> : icon}</View>
+      <Text style={styles.tileTitle} numberOfLines={2}>
+        {title}
+      </Text>
+      {subtitle ? (
+        <Text style={[styles.muted, { textAlign: 'center' }]} numberOfLines={2}>
+          {subtitle}
+        </Text>
+      ) : null}
+    </Pressable>
+  );
+}
+
+/** Choix d'une quantité : − / valeur / +, et raccourcis (`presets={[]}` pour les masquer). */
+export function Stepper({ value, onChange, min = 1, max = 9999, presets = [1, 5, 10, 50] }: { value: number; onChange: (value: number) => void; min?: number; max?: number; presets?: readonly number[] }) {
+  const clamp = (n: number) => Math.max(min, Math.min(max, n));
+  const shortcuts = presets.filter((p) => p <= max);
+  return (
+    <View style={{ gap: spacing.sm }}>
+      <Row>
+        <Button label="−" variant="secondary" disabled={value <= min} onPress={() => onChange(clamp(value - 1))} />
+        <TextInput
+          value={String(value)}
+          onChangeText={(text) => onChange(clamp(Number.parseInt(text, 10) || min))}
+          keyboardType="number-pad"
+          selectTextOnFocus
+          style={[styles.input, styles.stepperInput]}
+        />
+        <Button label="+" variant="secondary" disabled={value >= max} onPress={() => onChange(clamp(value + 1))} />
+      </Row>
+      {shortcuts.length > 0 && <Chips options={shortcuts.map((p) => ({ value: p, label: `×${p}` }))} value={value} onChange={(p) => onChange(clamp(p))} />}
+    </View>
   );
 }
 
@@ -202,6 +367,62 @@ export const styles = StyleSheet.create({
   },
   chipSelected: { backgroundColor: colors.accent, borderColor: colors.accent },
   chipLabel: { color: colors.text, fontSize: 13, fontWeight: '600' },
+  bubbles: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.sm,
+  },
+  bubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingLeft: 6,
+    paddingRight: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: colors.surfaceRaised,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    shadowColor: '#000',
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 6,
+  },
+  bubbleSelected: { backgroundColor: colors.accent, borderColor: colors.accent },
+  bubbleLabel: { color: colors.text, fontSize: 12, fontWeight: '700' },
+  bubbleBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    borderRadius: 9,
+    backgroundColor: colors.info,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bubbleBadgeText: { color: colors.accentText, fontSize: 11, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  tileGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: spacing.md },
+  tile: {
+    width: '48%',
+    aspectRatio: 1,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    padding: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  tileIcon: { height: 56, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
+  tileEmoji: { fontSize: 44 },
+  tileTitle: { color: colors.text, fontSize: 16, fontWeight: '700', textAlign: 'center' },
+  tileBadge: { position: 'absolute', top: spacing.sm, right: spacing.md, fontSize: 12, fontWeight: '700' },
+  stepperInput: { flex: 1, textAlign: 'center', fontWeight: '700' },
   progress: { height: 6, borderRadius: 3, backgroundColor: colors.background, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 3 },
 });

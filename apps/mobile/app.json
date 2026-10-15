@@ -41,6 +41,12 @@
     "scheme": "weedapp",
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "b9b9c347-3861-4e8d-97f1-be85ad488b15"
+      }
     }
   }
 }

@@ -15,6 +15,8 @@ interface GameStore {
   busy: boolean;
   notice: { text: string; tone: 'info' | 'error' | 'success' } | null;
   sync: () => Promise<void>;
+  /** Admin : simule `hours` actualisations. */
+  rewind: (hours: number) => Promise<void>;
   act: (action: GameAction, success?: string) => Promise<boolean>;
   run: <T extends Snapshot>(call: (client: GameClient) => Promise<T>) => Promise<T | null>;
   setNotice: (text: string, tone?: 'info' | 'error' | 'success') => void;
@@ -48,6 +50,21 @@ export const useGame = create<GameStore>((set, get) => {
         if (summary) set({ notice: { text: summary, tone: 'info' } });
       } catch (error) {
         fail(error);
+      }
+    },
+
+    rewind: async (hours) => {
+      if (get().busy) return;
+      set({ busy: true });
+      try {
+        const snapshot = await client.rewind(hours);
+        apply(snapshot);
+        const summary = eventsSummary(snapshot.events);
+        set({ notice: { text: `⏩ ${hours} h simulée(s)${summary ? ` · ${summary}` : ''}`, tone: 'info' } });
+      } catch (error) {
+        fail(error);
+      } finally {
+        set({ busy: false });
       }
     },
 
@@ -106,5 +123,16 @@ export function useGameState(): GameState | null {
   const state = useGame((s) => s.state);
   const now = useNow();
   const hour = Math.floor(now / HOUR_MS);
-  return useMemo(() => (state ? advance(state, hour * HOUR_MS).state : null), [state, hour]);
+  return useMemo(() => (state ? project(state, hour) : null), [state, hour]);
+}
+
+// Projection partagée : tous les écrans montés (onglets compris) lisent le même résultat
+// au lieu de recloner et rejouer l'état chacun de leur côté.
+let projection: { source: GameState; hour: number; result: GameState } | null = null;
+
+function project(state: GameState, hour: number): GameState {
+  if (projection?.source !== state || projection.hour !== hour) {
+    projection = { source: state, hour, result: advance(state, hour * HOUR_MS).state };
+  }
+  return projection.result;
 }

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { advance } from '../advance.ts';
-import { discardMales, fillToMax, plantFastestGerms, sowSeeds, treatPlants, waterPlants } from '../actions/culture.ts';
-import { HOUR_MS, type GameState } from '../state.ts';
+import { discardMales, fillToMax, germinationCapacity, plantFastestGerms, plantGerms, sowSeeds, treatPlants, waterPlants } from '../actions/culture.ts';
+import { BALANCE } from '../data/balance.ts';
+import { HOUR_MS, isProtected, type GameState } from '../state.ts';
 import { addPlant, equippedGame, hoursLater, plantById, T0 } from '../test-utils.ts';
 import { equipmentFactor, lightFactor } from './growth.ts';
 
@@ -111,6 +112,33 @@ describe('croissance', () => {
     expect(infested.length).toBeGreaterThan(0);
     expect(infested.every((p) => !p.protectedVeg)).toBe(true);
   });
+
+  it('en floraison, la protection dure 36 à 60 h puis s’use', () => {
+    const state = equippedGame(30);
+    for (let i = 0; i < 20; i++) addPlant(state, { stage: 'flo', height: 70, floProtectionHours: 0 });
+    const treated = treatPlants(state, 'all');
+    const hours = treated.plants.map((p) => p.floProtectionHours);
+    expect(hours.every((h) => h >= 36 && h <= 60)).toBe(true);
+    expect(new Set(hours).size).toBeGreaterThan(1);
+
+    const watered = fillToMax(treated, 'all');
+    expect(hoursLater(watered, 12).plants.every((p) => isProtected(p))).toBe(true);
+    const later = hoursLater(fillToMax(hoursLater(fillToMax(hoursLater(watered, 12), 'all'), 12), 'all'), 12);
+    // 36 h écoulées : chaque plant a perdu 36 h de protection, certains ne sont plus protégés.
+    expect(later.plants.every((p, i) => p.floProtectionHours === Math.max(0, hours[i]! - 36))).toBe(true);
+    const at60 = hoursLater(fillToMax(hoursLater(fillToMax(later, 'all'), 12), 'all'), 12);
+    expect(at60.plants.some((p) => !isProtected(p))).toBe(true);
+    expect(at60.plants.filter((p) => p.stage === 'flo').every((p) => !isProtected(p))).toBe(true);
+  });
+
+  it('en végétation, un seul traitement protège jusqu’à la fin du stade', () => {
+    const state = equippedGame();
+    const plant = addPlant(state, { protectedVeg: false, floProtectionHours: 0 });
+    const treated = fillToMax(treatPlants(state, 'all'), 'all');
+    const later = hoursLater(fillToMax(hoursLater(treated, 12), 'all'), 12);
+    expect(plantById(later, plant.id)).toMatchObject({ stage: 'veg', protectedVeg: true });
+    expect(isProtected(plantById(later, plant.id))).toBe(true);
+  });
 });
 
 describe('floraison, pollinisation et séchage', () => {
@@ -183,5 +211,37 @@ describe('cycle complet', () => {
     expect(s.plants.every((p) => p.stage === 'dry')).toBe(true);
     expect(hours / 24).toBeGreaterThanOrEqual(4.5);
     expect(hours / 24).toBeLessThanOrEqual(8);
+  });
+});
+
+describe('germination', () => {
+  it('un germe meurt faute de place au bout de sa durée de vie, même petit, et ne peut plus être planté', () => {
+    const state = sowSeeds(equippedGame(), 'super_skunk', 3, T0);
+    state.germs[0]!.devIndex = 1.3;
+    state.germs[1]!.devIndex = 1;
+    state.germs[2]!.devIndex = 0.5; // très lent : n'atteint jamais 15 cm à temps
+    const { lifespanHours } = BALANCE.germination;
+    const almost = advance(state, T0 + (lifespanHours - 1) * HOUR_MS);
+    expect(almost.state.germs.every((germ) => !germ.dead)).toBe(true);
+    const later = advance(state, T0 + lifespanHours * HOUR_MS);
+    expect(later.state.germs.every((germ) => germ.dead)).toBe(true);
+    expect(later.state.germs[2]!.height).toBeLessThan(BALANCE.germination.maxHeight);
+    expect(later.events).toContainEqual(expect.objectContaining({ type: 'germs_died', count: 3 }));
+    expect(() => plantGerms(later.state, [later.state.germs[0]!.id], 40, T0)).toThrow('GERM_DEAD');
+    expect(() => plantFastestGerms(later.state, 1, 40, T0)).toThrow('NOT_ENOUGH_READY_GERMS');
+    // Les germes morts occupent le kit jusqu'à ce qu'on les jette.
+    const free = germinationCapacity(later.state) - 3;
+    expect(() => sowSeeds(later.state, 'super_skunk', free + 1, T0)).toThrow('GERMINATION_FULL');
+  });
+});
+
+describe('mort des plants', () => {
+  it('retient la salle où le plant est mort', () => {
+    const state = equippedGame();
+    const veg = addPlant(state);
+    const flo = addPlant(state, { stage: 'flo', height: 70 });
+    const after = advance(state, T0 + HOUR_MS).state;
+    expect(plantById(after, veg.id)).toMatchObject({ stage: 'dead', diedIn: 'veg' });
+    expect(plantById(after, flo.id)).toMatchObject({ stage: 'dead', diedIn: 'flo' });
   });
 });

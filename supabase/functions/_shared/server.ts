@@ -61,6 +61,13 @@ export async function assertNotBanned(userId: string, scope: 'game' | 'chat'): P
   if (data) throw new HttpError(403, 'BANNED');
 }
 
+/** Réservé aux comptes admin (outils de test). */
+export async function requireAdmin(userId: string): Promise<void> {
+  const { data, error } = await admin.from('profiles').select('role').eq('id', userId).maybeSingle();
+  if (error) throw error;
+  if (data?.role !== 'admin') throw new HttpError(403, 'FORBIDDEN');
+}
+
 export interface PlayerRecord {
   id: string;
   pseudo: string;
