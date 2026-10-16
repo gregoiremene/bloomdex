@@ -83,6 +83,8 @@ const ERRORS: Record<string, string> = {
   FORBIDDEN: 'Réservé aux admins.',
   NETWORK_ERROR: 'Pas de connexion au serveur.',
   RATE_LIMITED: 'Doucement ! Attends quelques secondes.',
+  BLOCKED: 'Impossible : l’un de vous a bloqué l’autre.',
+  MESSAGE_NOT_FOUND: 'Message introuvable.',
 };
 
 export function errorMessage(code: string): string {
@@ -117,6 +119,7 @@ export function logText(entry: LogEntry): string {
     case 'theft_failed': return `Vol raté chez ${d.target} (${d.thieves} voleurs perdus)`;
     case 'robbed': return `${d.attacker} t'a volé ${wl(Number(d.money))} et ${grams(Number(d.grams))} !`;
     case 'theft_repelled': return `Tes gardes ont repoussé les voleurs de ${d.attacker}`;
+    case 'quiz_reward': return `Quiz du squatte : ${wl(Number(d.amount))} gagnés (${d.wins} bonne(s) réponse(s))`;
     case 'detective': return `Dossier du détective sur ${d.target}`;
     default: return entry.type;
   }

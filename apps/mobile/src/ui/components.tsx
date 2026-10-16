@@ -2,7 +2,6 @@ import { HeaderHeightContext } from '@react-navigation/elements';
 import { useContext, useRef, type ReactNode } from 'react';
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   RefreshControl,
@@ -17,6 +16,7 @@ import {
   type TextInputProps,
   type ViewStyle,
 } from 'react-native';
+import { KeyboardAvoidingView } from './keyboard';
 import { colors, radius, spacing } from './theme';
 
 /** Distance du bas (px) à partir de laquelle on charge la suite d'une liste. */
@@ -250,6 +250,7 @@ export function Tile({
   subtitle,
   badge,
   badgeTone = 'accent',
+  count,
   dimmed,
   onPress,
 }: {
@@ -258,6 +259,8 @@ export function Tile({
   subtitle?: string;
   badge?: string;
   badgeTone?: 'accent' | 'warning' | 'danger' | 'muted';
+  /** Bulle rouge bien visible en haut à droite (ex. messages non lus) ; masquée à 0. */
+  count?: number;
   dimmed?: boolean;
   onPress: () => void;
 }) {
@@ -272,6 +275,11 @@ export function Tile({
         <Text style={[styles.tileBadge, { color: badgeTone === 'muted' ? colors.textMuted : colors[badgeTone] }]} numberOfLines={1}>
           {badge}
         </Text>
+      ) : null}
+      {count ? (
+        <View style={styles.tileCount} accessibilityLabel={`${count} non lu(s)`}>
+          <Text style={styles.tileCountText}>{count > 99 ? '99+' : count}</Text>
+        </View>
       ) : null}
       <View style={styles.tileIcon}>{typeof icon === 'string' ? <Text style={styles.tileEmoji}>{icon}</Text> : icon}</View>
       <Text style={styles.tileTitle} numberOfLines={2}>
@@ -382,15 +390,15 @@ export const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 999,
     backgroundColor: colors.surfaceRaised,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderWidth: 1,
+    borderColor: colors.text,
     shadowColor: '#000',
     shadowOpacity: 0.35,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 6,
   },
-  bubbleSelected: { backgroundColor: colors.accent, borderColor: colors.accent },
+  bubbleSelected: { backgroundColor: colors.warning, borderColor: colors.text },
   bubbleLabel: { color: colors.text, fontSize: 12, fontWeight: '700' },
   bubbleBadge: {
     position: 'absolute',
@@ -421,6 +429,26 @@ export const styles = StyleSheet.create({
   tileIcon: { height: 56, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
   tileEmoji: { fontSize: 44 },
   tileTitle: { color: colors.text, fontSize: 16, fontWeight: '700', textAlign: 'center' },
+  tileCount: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    minWidth: 30,
+    height: 30,
+    paddingHorizontal: 8,
+    borderRadius: 15,
+    backgroundColor: colors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.surface,
+    shadowColor: '#000',
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  tileCountText: { color: '#FFFFFF', fontSize: 15, fontWeight: '900', fontVariant: ['tabular-nums'] },
   tileBadge: { position: 'absolute', top: spacing.sm, right: spacing.md, fontSize: 12, fontWeight: '700' },
   stepperInput: { flex: 1, textAlign: 'center', fontWeight: '700' },
   progress: { height: 6, borderRadius: 3, backgroundColor: colors.background, overflow: 'hidden' },

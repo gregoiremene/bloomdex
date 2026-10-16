@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { newGame, T0 } from '../test-utils.ts';
-import { buyNextHousing, chooseJob, deposit, fireGuards, hireGuards, withdraw } from './economy.ts';
+import { buyNextHousing, chooseJob, creditQuizRewards, deposit, fireGuards, hireGuards, withdraw } from './economy.ts';
 
 describe('banque (livret unique)', () => {
   it('dépôt puis retrait avec 2,5 % de frais déduits de la somme reçue', () => {
@@ -47,5 +47,16 @@ describe('gardes du corps', () => {
     expect(hired).toMatchObject({ guards: 3, money: 500 });
     expect(() => fireGuards(hired, 4, T0)).toThrow('NOT_ENOUGH_GUARDS');
     expect(() => fireGuards(hired, 1, T0)).toThrow('INSUFFICIENT_FUNDS');
+  });
+});
+
+describe('quiz du squatte', () => {
+  it('verse les gains dans la bourse et le note au journal', () => {
+    const state = newGame();
+    const next = creditQuizRewards(state, 400, 2, T0);
+    expect(next.money).toBe(state.money + 400);
+    expect(next.log[0]).toMatchObject({ type: 'quiz_reward', data: { amount: 400, wins: 2 } });
+    expect(state.money).toBe(2_000);
+    expect(() => creditQuizRewards(state, 0, 1, T0)).toThrow('INVALID_QUANTITY');
   });
 });

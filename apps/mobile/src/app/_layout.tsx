@@ -4,6 +4,8 @@ import { useEffect } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useSession } from '@/auth/session';
+import { FeedbackButton } from '@/ui/Feedback';
+import { KeyboardProvider } from '@/ui/keyboard';
 import { LegalGate } from '@/ui/LegalGate';
 import { Notice } from '@/ui/Notice';
 import { colors } from '@/ui/theme';
@@ -14,6 +16,7 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
+      <KeyboardProvider>
       <StatusBar style="light" />
       <LegalGate>
         <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -24,6 +27,8 @@ export default function RootLayout() {
               headerTitleStyle: { fontWeight: '700' },
               contentStyle: { backgroundColor: colors.background },
               headerBackTitle: 'Retour',
+              // À gauche : la flèche de retour ; le bouton 💡 passe donc à droite sur ces écrans.
+              headerRight: () => <FeedbackButton side="right" />,
             }}
           >
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -32,10 +37,13 @@ export default function RootLayout() {
             <Stack.Screen name="jobs" options={{ title: 'Métiers' }} />
             <Stack.Screen name="players" options={{ title: 'La ville' }} />
             <Stack.Screen name="journal" options={{ title: 'Journal' }} />
+            <Stack.Screen name="messages/index" options={{ title: 'Messages' }} />
+            <Stack.Screen name="messages/[id]" options={{ title: 'Conversation' }} />
           </Stack>
           <Notice />
         </View>
       </LegalGate>
+      </KeyboardProvider>
     </SafeAreaProvider>
   );
 }

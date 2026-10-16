@@ -104,6 +104,20 @@ export async function savePlayer(userId: string, state: GameState, expectedVersi
   return data === true;
 }
 
+/** Gains du quiz en attente, marqués comme versés (à annuler avec releaseQuizRewards si la sauvegarde échoue). */
+export async function claimQuizRewards(userId: string): Promise<{ ids: number[]; amount: number }> {
+  const { data, error } = await admin.rpc('claim_quiz_rewards', { uid: userId });
+  if (error) throw error;
+  const rows = (data ?? []) as { id: number; amount: number }[];
+  return { ids: rows.map((r) => r.id), amount: rows.reduce((sum, r) => sum + r.amount, 0) };
+}
+
+export async function releaseQuizRewards(ids: number[]): Promise<void> {
+  if (ids.length === 0) return;
+  const { error } = await admin.rpc('release_quiz_rewards', { ids });
+  if (error) console.error('release_quiz_rewards', error);
+}
+
 /** Notification push via le service Expo (au mieux : une erreur n'interrompt pas l'action). */
 export async function sendPush(userId: string, title: string, body: string): Promise<void> {
   try {

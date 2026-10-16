@@ -16,6 +16,21 @@ function spend(state: GameState, cost: number): void {
   state.money -= cost;
 }
 
+// ---------------------------------------------------------------- Quiz du squatte
+
+/**
+ * Verse les gains du quiz (montants décidés côté serveur, table quiz_config) dans la bourse.
+ * Appelé par la fonction game avant l'action du joueur ; pas une action que le joueur peut envoyer.
+ */
+export function creditQuizRewards(state: GameState, amount: number, wins: number, now: number): GameState {
+  assertPositiveInt(amount);
+  assertPositiveInt(wins);
+  const next = cloneState(state);
+  next.money += amount;
+  addLog(next, now, 'quiz_reward', { amount, wins });
+  return next;
+}
+
 // ---------------------------------------------------------------- Ventes
 
 /** Dépose des grammes dans un lieu ouvert. Une seule vente par lieu à la fois. */

@@ -2,9 +2,11 @@ import { Redirect, Tabs } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator, AppState, Text, View } from 'react-native';
 import { useSession } from '@/auth/session';
+import { useMessages } from '@/game/messages';
 import { useGame } from '@/game/store';
 import { isOnline } from '@/lib/supabase';
 import { colors } from '@/ui/theme';
+import { FeedbackButton } from '@/ui/Feedback';
 import { WalletButton } from '@/ui/Wallet';
 
 function icon(glyph: string) {
@@ -17,6 +19,12 @@ export default function TabsLayout() {
   const sync = useGame((s) => s.sync);
   const loaded = useGame((s) => s.state !== null);
   const signedIn = !isOnline || session !== null;
+  const userId = session?.user.id;
+  const subscribeMessages = useMessages((s) => s.subscribe);
+  const unread = useMessages((s) => s.unread);
+
+  // MP : compteur de non-lus tenu à jour en temps réel tant que le joueur est connecté.
+  useEffect(() => (userId ? subscribeMessages(userId) : undefined), [userId, subscribeMessages]);
 
   // Synchronise à l'ouverture et à chaque retour au premier plan (rattrapage des heures écoulées).
   useEffect(() => {
@@ -43,6 +51,7 @@ export default function TabsLayout() {
         tabBarInactiveTintColor: colors.textMuted,
         sceneStyle: { backgroundColor: colors.background },
         headerRight: () => <WalletButton />,
+        headerLeft: () => <FeedbackButton side="left" />,
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Exploitation', tabBarIcon: icon('🌱') }} />
@@ -50,7 +59,8 @@ export default function TabsLayout() {
       <Tabs.Screen name="sell" options={{ title: 'Vendre', tabBarIcon: icon('💸') }} />
       <Tabs.Screen name="bank" options={{ title: 'Banque', tabBarIcon: icon('🏦') }} />
       <Tabs.Screen name="chat" options={{ title: 'Squatte', tabBarIcon: icon('💬') }} />
-      <Tabs.Screen name="more" options={{ title: 'Plus', tabBarIcon: icon('☰') }} />
+      {/* MP non lus : pastille sur l'onglet Plus (la messagerie y est, tuile « Messages »). */}
+      <Tabs.Screen name="more" options={{ title: 'Plus', tabBarIcon: icon('☰'), tabBarBadge: unread > 0 ? unread : undefined }} />
     </Tabs>
   );
 }

@@ -14,7 +14,7 @@ Principes :
 1. **Un vrai jeu dont on s'occupe chaque jour, en sessions courtes** : **2 sessions/jour** (matin dans les transports, soir), 2-5 min chacune. Chaque session a des tâches utiles (arroser, engrais, insecticide, planter les germes, jeter les mâles, lancer/relever une vente, déposer à la banque). Les notifications rappellent quoi faire.
 2. **Cycle de culture complet = ~1 semaine réelle** (comme l'original). `GAME_SPEED = 1`. Les consommations d'eau/engrais sont calibrées pour qu'**un intervalle de ~12 h soit sûr** et qu'on tienne ~18-24 h avant la mort (une session ratée ne tue pas tout).
 3. **Actions groupées** par défaut (arroser toute la salle, planter les N germes les plus rapides) ; le plant par plant reste possible.
-4. **Multijoueur social dès la V0** : on joue entre potes (chat, vols, gardes). Serveur autoritaire.
+4. **Multijoueur social dès la V0** : chat, vols, gardes. Public visé : la communauté de l'ancien jeu (pas seulement des potes). Serveur autoritaire.
 5. Pas d'apologie : univers cartoon/satirique, 100 % fictif, rappel légal au premier lancement, âge 17+/18+.
 
 ## Périmètre V0 (en ligne, entre potes)
@@ -31,13 +31,23 @@ Principes :
 - **Banque : un seul livret** (dépôt/retrait avec frais, intérêts hebdo, plafond). Indispensable : l'argent en bourse subit l'ISF et les voleurs.
 - **Vols entre joueurs + gardes du corps** (règles de l'original : 10 % max de la bourse, 3 attaques/jour, pas d'attaque vers plus petite habitation, < Maison inattaquable). **Détective** (dossier sur un joueur) : faible coût, à décider.
 - **Chat global (squatte)** temps réel, avec signalement + blocage d'un joueur (exigé par les stores pour le contenu généré par les utilisateurs).
+- **Quiz du squatte** : une question toutes les 15 min (pg_cron), sauf 1 h-7 h et quand personne n'a écrit depuis 3 h ; question dans un bandeau du chat, premier à écrire la bonne réponse : 200 Wl (5 gains/jour max), versés à sa prochaine action ; réponse affichée avec la question suivante si personne ne trouve. Réglages dans la table `quiz_config`, banque dans `quiz_questions` (modifiable par les modérateurs).
+- **Messages privés (MP)** entre joueurs, tout le monde peut écrire à tout le monde ; texte seul ; blocage, ban du squatte et anti-flood s'appliquent ; signalement par le destinataire (copie du message dans `dm_reports`, seule fenêtre des modérateurs sur les MP) ; suppression automatique à 90 jours ; messagerie dans l'onglet Plus, pastille de non-lus sur l'onglet Plus et sur la tuile Messages.
+- **Retours joueurs** : bouton 💡 dans le header de tous les écrans (en haut à gauche des onglets, à droite des écrans avec retour) ; suggestion / bug / autre, avec l'écran, la plateforme et la version envoyés automatiquement ; table `feedback` (lecture : chaque joueur les siens, modérateurs tous ; 10 envois/h max).
 - **Modération** : rôle admin/modérateur ; **ban temporaire** (durée au choix, motif) qui coupe le chat et/ou l'accès au jeu ; suppression de message ; file des signalements. Modération manuelle par l'équipe au lancement.
 - **Départ** : petit stock de beuh offert (~150 g, à équilibrer) + tutoriel, pour pouvoir vendre dès le jour 1 malgré l'absence de grossiste et la 1ʳᵉ récolte à J+7.
 - Journal des 50 dernières actions (dont vols subis/tentés) ; notifications push (soif, passage de stade, séchage fini, vente terminée, indice police critique, vol subi, impôts).
 
-**V1** : grossiste PNJ, outdoor + météo + citerne + solaire/éolien, shit (conversion 24 h, −20 %), usure matériel + CO2, livrets B/C/D, véhicules + cachette, jardinier, casino/loterie, quizz du squatte, succès/quêtes.
+**V1** : grossiste PNJ, outdoor + météo + citerne + solaire/éolien, shit (conversion 24 h, −20 %), usure matériel + CO2, livrets B/C/D, véhicules + cachette, jardinier, casino/loterie, succès/quêtes.
 
-**V2** : marché entre joueurs + ventes directes, prix par l'offre réelle, alliances, MP, classements multi-mondes, saisons (reset), monétisation.
+**V2** : marché entre joueurs + ventes directes, prix par l'offre réelle, alliances, classements multi-mondes, saisons (reset).
+
+**Monétisation (après la V0)** : monnaie premium, les **weedoses**, pour aider à se financer.
+- Bonus de jeu **plafonnés par niveau d'habitation** : ils aident au démarrage et cessent de fonctionner vers la Maison/Villa (là où commencent les vols), donc pas de pay-to-win entre joueurs établis. Exemples : pousse boostée temporaire, pack de démarrage (matériel plutôt que weedlars), séchage express, germes plus résistants ; weedlars en direct seulement petits, plafonnés et en début de partie.
+- **Cosmétique** pour tous les niveaux (badge/pseudo coloré dans le chat, apparence des plantes et pots) + éventuel pass soutien.
+- Technique : weedoses dans une **table à part avec historique** (achat, dépense, remboursement), hors de l'état de jeu ; dépense via le moteur comme une action ; catalogue des bonus et plafonds dans `data/`. Paiement web : prestataire qui gère la TVA (Paddle / Lemon Squeezy) ou Stripe ; crédit par webhook vers une Edge Function.
+- Préalables (côté porteur·se du projet) : **accord écrit du prestataire** pour un jeu à thème cannabis (listes d'activités interdites), statut pour encaisser, CGV + renonciation au délai de rétractation.
+- À anticiper avec le marché V2 : transferts depuis des petits comptes (multi-comptes) vers un compte principal.
 
 **Hors périmètre** : paris sportifs réels, pubs joueurs, parrainage.
 
@@ -53,7 +63,7 @@ Principes :
 
 ```
 apps/mobile/src/      # app Expo (SDK 54, RN 0.81) — vérifier la doc Expo v54 (docs.expo.dev/versions/v54.0.0/) avant toute API
-  app/            # écrans Expo Router : (tabs)/ index (exploitation), shop, sell, bank, chat, more ; housing, jobs, players, journal, login
+  app/            # écrans Expo Router : (tabs)/ index (exploitation), shop, sell, bank, chat, more ; housing, jobs, players, journal, login, messages/ (MP)
   game/           # client de jeu (Supabase ou démo locale), store zustand, libellés FR
   auth/           # session Supabase + profil (rôle)
   lib/supabase.ts # client (null si non configuré → mode démo hors ligne)
@@ -99,10 +109,14 @@ docs/
 - 2026-09-30 : stack Expo + Supabase + moteur TS partagé ; **un seul monde et un chat global** (pas de mondes privés) ; modération manuelle avec ban temporaire ; stock de départ offert.
 - 2026-10-07 : ISF calculé sur la part de la bourse au-dessus du seuil (pas de cliff) ; au passage en floraison, eau/engrais convertis pour garder la même autonomie ; « Disney Village » renommé « Parc d'attractions » (pas de marque).
 - 2026-10-07 : le jeu doit aussi être jouable sur le web (export Metro `single`, hébergement EAS Hosting) ; pas de notifications sur le web.
+- 2026-10-16 : **le web d'abord** (pas de commission ni de validation des stores), les apps iOS/Android éventuellement plus tard. Monétisation par weedoses après la V0, selon les règles de la section « Monétisation ».
 - 2026-10-10 : projet rétrogradé de SDK 57 à **SDK 54** (Expo Go de l'utilisateur·rice en 54 ; compatible Xcode 16.1+, donc build iOS local possible).
 - 2026-10-10 : développement en **Expo Go** (plus rapide) ; notifications désactivées dans Expo Go et sur le web (module chargé à la demande), réactivées automatiquement dans un dev build / build store.
 - 2026-10-13 : pucerons — 1 traitement suffit en végé ; en flo la protection s'use après 36-60 h (tirage par plant et par traitement, ≈ 2 traitements par flo). Durée **jamais affichée** : seul un 🐜 signale un plant non protégé, les joueurs apprennent le rythme en jouant.
 - 2026-10-13 : les germes morts occupent le kit jusqu'à ce qu'on les jette. Les plants morts restent affichés dans la salle où ils sont morts.
 - 2026-10-15 : un germe meurt faute de place **48 h après son semis**, quelle que soit sa taille (remplace « 12 h à 15 cm », qui laissait vivre indéfiniment les germes lents) ; signalé « à l'étroit » ses 12 dernières heures.
 - 2026-10-15 : prix de revente = une échelle fixe redistribuée au hasard entre les 14 variétés **toutes les 6 semaines** (comme l'original : toujours 2 variétés à 7 Wl/g, jamais les mêmes d'office). Pour éviter que tout le monde ne plante que celles-là : **saturation par joueur**, son prix baisse avec ce qu'il a déjà vendu de la variété pendant la période (compteur `marketSold`, remis à zéro à chaque réévaluation). Remplace « prix de base × 0,6-1,5 chaque semaine ». (V2 : saturation globale selon l'offre réelle.)
+- 2026-10-16 : quiz du squatte avancé en V0. Ses réglages (gain, plafond, heures) vivent en base (`quiz_config`) et non dans `data/` : c'est une fonction du chat, gérée par SQL ; le moteur ne fait que verser les gains (`creditQuizRewards`).
+- 2026-10-16 : MP avancés en V0. Les modérateurs ne lisent que les MP signalés ; l'accès technique à la base (dashboard, clé serveur) permet de tout lire : à mentionner dans les CGU / la politique de confidentialité (« pas lus sauf signalement ou demande légale, effacés après 90 jours »). Pas de chiffrement de bout en bout (signalements invérifiables).
+- 2026-10-16 : clavier géré par **react-native-keyboard-controller** (inclus dans Expo Go SDK 54) via `ui/keyboard.native.tsx` (web : `ui/keyboard.tsx`, composant standard). Le `KeyboardAvoidingView` de React Native se trompe sur Android en plein écran (edge-to-edge). Écran sans barre d'onglets avec un champ en bas : pas de KeyboardAvoidingView, mais `KeyboardSpacer` tout en bas (hauteur du clavier, sinon barre système) ; ne pas passer la hauteur du header en décalage à la bibliothèque (déjà comptée).
 - Ordre de travail : 1) moteur de culture + tests (local) 2) Supabase + comptes + banque 3) ventes, police, impôts 4) chat + modération, puis vols + gardes.
