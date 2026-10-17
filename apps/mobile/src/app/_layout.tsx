@@ -39,6 +39,8 @@ export default function RootLayout() {
             <Stack.Screen name="journal" options={{ title: 'Journal' }} />
             <Stack.Screen name="messages/index" options={{ title: 'Messages' }} />
             <Stack.Screen name="messages/[id]" options={{ title: 'Conversation' }} />
+            <Stack.Screen name="admin/index" options={{ title: 'Admin · joueurs' }} />
+            <Stack.Screen name="admin/[id]" options={{ title: 'Joueur' }} />
           </Stack>
           <Notice />
         </View>

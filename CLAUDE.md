@@ -34,6 +34,7 @@ Principes :
 - **Quiz du squatte** : une question toutes les 15 min (pg_cron), sauf 1 h-7 h et quand personne n'a écrit depuis 3 h ; question dans un bandeau du chat, premier à écrire la bonne réponse : 200 Wl (5 gains/jour max), versés à sa prochaine action ; réponse affichée avec la question suivante si personne ne trouve. Réglages dans la table `quiz_config`, banque dans `quiz_questions` (modifiable par les modérateurs).
 - **Messages privés (MP)** entre joueurs, tout le monde peut écrire à tout le monde ; texte seul ; blocage, ban du squatte et anti-flood s'appliquent ; signalement par le destinataire (copie du message dans `dm_reports`, seule fenêtre des modérateurs sur les MP) ; suppression automatique à 90 jours ; messagerie dans l'onglet Plus, pastille de non-lus sur l'onglet Plus et sur la tuile Messages.
 - **Retours joueurs** : bouton 💡 dans le header de tous les écrans (en haut à gauche des onglets, à droite des écrans avec retour) ; suggestion / bug / autre, avec l'écran, la plateforme et la version envoyés automatiquement ; table `feedback` (lecture : chaque joueur les siens, modérateurs tous ; 10 envois/h max).
+- **Page admin** (Plus → Admin, rôle `admin` seulement, pas les modérateurs) : liste de tous les joueurs et fiche détaillée de chaque partie, projetée à l'heure actuelle avec le moteur ; lecture seule (politique RLS `is_admin` sur `player_states`).
 - **Modération** : rôle admin/modérateur ; **ban temporaire** (durée au choix, motif) qui coupe le chat et/ou l'accès au jeu ; suppression de message ; file des signalements. Modération manuelle par l'équipe au lancement.
 - **Départ** : petit stock de beuh offert (~150 g, à équilibrer) + tutoriel, pour pouvoir vendre dès le jour 1 malgré l'absence de grossiste et la 1ʳᵉ récolte à J+7.
 - Journal des 50 dernières actions (dont vols subis/tentés) ; notifications push (soif, passage de stade, séchage fini, vente terminée, indice police critique, vol subi, impôts).
@@ -44,7 +45,7 @@ Principes :
 
 **Monétisation (après la V0)** : monnaie premium, les **weedoses**, pour aider à se financer.
 - Bonus de jeu **plafonnés par niveau d'habitation** : ils aident au démarrage et cessent de fonctionner vers la Maison/Villa (là où commencent les vols), donc pas de pay-to-win entre joueurs établis. Exemples : pousse boostée temporaire, pack de démarrage (matériel plutôt que weedlars), séchage express, germes plus résistants ; weedlars en direct seulement petits, plafonnés et en début de partie.
-- **Cosmétique** pour tous les niveaux (badge/pseudo coloré dans le chat, apparence des plantes et pots) + éventuel pass soutien.
+- **Cosmétique** pour tous les niveaux (badge/pseudo coloré dans le chat, apparence des plantes et pots) + éventuel pass soutien. Déjà en place : `profiles.chat_color` / `chat_badge` (réglables par l'équipe, copiés dans chaque message du squatte ; par défaut admin doré 👑, modérateurs violet 🛡️).
 - Technique : weedoses dans une **table à part avec historique** (achat, dépense, remboursement), hors de l'état de jeu ; dépense via le moteur comme une action ; catalogue des bonus et plafonds dans `data/`. Paiement web : prestataire qui gère la TVA (Paddle / Lemon Squeezy) ou Stripe ; crédit par webhook vers une Edge Function.
 - Préalables (côté porteur·se du projet) : **accord écrit du prestataire** pour un jeu à thème cannabis (listes d'activités interdites), statut pour encaisser, CGV + renonciation au délai de rétractation.
 - À anticiper avec le marché V2 : transferts depuis des petits comptes (multi-comptes) vers un compte principal.
@@ -63,7 +64,7 @@ Principes :
 
 ```
 apps/mobile/src/      # app Expo (SDK 54, RN 0.81) — vérifier la doc Expo v54 (docs.expo.dev/versions/v54.0.0/) avant toute API
-  app/            # écrans Expo Router : (tabs)/ index (exploitation), shop, sell, bank, chat, more ; housing, jobs, players, journal, login, messages/ (MP)
+  app/            # écrans Expo Router : (tabs)/ index (exploitation), shop, sell, bank, chat, more ; housing, jobs, players, journal, login, messages/ (MP), admin/
   game/           # client de jeu (Supabase ou démo locale), store zustand, libellés FR
   auth/           # session Supabase + profil (rôle)
   lib/supabase.ts # client (null si non configuré → mode démo hors ligne)

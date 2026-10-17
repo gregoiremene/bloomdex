@@ -37,6 +37,9 @@ export default function MoreScreen() {
           />
         )}
         <Tile icon="📓" title="Journal" subtitle="Tes 50 dernières actions" onPress={() => router.push('/journal')} />
+        {isOnline && profile?.role === 'admin' && (
+          <Tile icon="🛠️" title="Admin" subtitle="Parties de tous les joueurs" onPress={() => router.push('/admin')} />
+        )}
         <Tile icon="👤" title="Compte" subtitle={isOnline ? (profile?.pseudo ?? '…') : 'Mode démo'} onPress={() => setAccount(true)} />
       </TileGrid>
 

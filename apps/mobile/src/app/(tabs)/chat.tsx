@@ -14,6 +14,9 @@ interface Message {
   /** null pour les messages du bot (quiz). */
   user_id: string | null;
   kind: 'player' | 'quiz';
+  /** Style du pseudo au moment de l'envoi (admin, modérateur, cosmétique) ; null = style normal. */
+  author_color: string | null;
+  author_badge: string | null;
   pseudo: string;
   body: string;
   created_at: string;
@@ -46,7 +49,7 @@ function useChat() {
     let active = true;
     void client
       .from('chat_messages')
-      .select('id, user_id, kind, pseudo, body, created_at, deleted_at')
+      .select('id, user_id, kind, pseudo, author_color, author_badge, body, created_at, deleted_at')
       .order('created_at', { ascending: false })
       .limit(HISTORY)
       .then(({ data }) => active && setMessages((data as Message[] | null) ?? []));
@@ -159,7 +162,10 @@ function MessageBubble({
   return (
     <Pressable onPress={onPress} style={[styles.bubble, mine && styles.bubbleMine, selected && { borderColor: colors.accent }]}>
       <Row>
-        <Text style={[styles.pseudo, mine && { color: colors.accent }]}>{message.pseudo}</Text>
+        <Text style={[styles.pseudo, mine && { color: colors.accent }, message.author_color ? { color: message.author_color } : null]}>
+          {message.author_badge ? `${message.author_badge} ` : ''}
+          {message.pseudo}
+        </Text>
         <Text style={styles.time}>{time}</Text>
         {message.deleted_at && <Text style={styles.deleted}>masqué</Text>}
       </Row>
